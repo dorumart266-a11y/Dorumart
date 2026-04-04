@@ -1,0 +1,72 @@
+<!DOCTYPE html><html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DoruMart</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;background:#f3f4f6} .top{display:flex;gap:10px;padding:14px;background:#fff;position:sticky;top:0} button{cursor:pointer}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;padding:20px}.card{background:#fff;padding:14px;border-radius:16px}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:20}.box{background:#fff;padding:20px;border-radius:16px;width:420px;max-height:80vh;overflow:auto}
+input{width:100%;padding:10px;margin:8px 0;border:1px solid #ccc;border-radius:8px}
+</style>
+</head>
+<body>
+<div class="top">
+  <button onclick="openAdmin()">Admin</button>
+  <button onclick="openVendorLogin()">Vendor</button>
+</div><div style="padding:20px">
+  <h2>🏪 Verified Vendor Shops</h2>
+  <div id="shops" class="grid"></div>
+</div><div id="vendorLogin" class="modal"><div class="box">
+  <h3>Vendor Login</h3>
+  <input id="vEmail" placeholder="vendor@dorumart.com">
+  <input id="vPass" type="password" placeholder="12345">
+  <button onclick="vendorLogin()">Login</button>
+</div></div><div id="vendorDash" class="modal"><div class="box">
+  <h3>Vendor Dashboard</h3>
+  <input id="shopName" placeholder="Shop name">
+  <input id="shopImage" type="file" accept="image/*">
+  <button onclick="addShop()">Add Shop</button>
+  <div id="vendorApprovedShops"></div>
+</div></div><div id="adminDash" class="modal"><div class="box">
+  <h3>Admin Pending Shops</h3>
+  <div id="pendingShops"></div>
+</div></div><div id="shopModal" class="modal"><div class="box">
+  <h3 id="shopTitle"></h3>
+  <div id="shopProducts"></div>
+</div></div><div id="manageProducts" class="modal"><div class="box">
+  <h3 id="manageTitle"></h3>
+  <input id="prodName" placeholder="Product name">
+  <input id="prodPrice" type="number" placeholder="Price">
+  <button onclick="addProductToShop()">Add Product</button>
+  <div id="manageList"></div>
+</div></div><script>
+let currentShop='';
+function getShops(){return JSON.parse(localStorage.getItem('dorumart_vendor_shops')||'[]')}
+function setShops(v){localStorage.setItem('dorumart_vendor_shops',JSON.stringify(v))}
+function getProducts(){return JSON.parse(localStorage.getItem('dorumart_shop_products')||'{}')}
+function setProducts(v){localStorage.setItem('dorumart_shop_products',JSON.stringify(v))}
+
+function openVendorLogin(){document.getElementById('vendorLogin').style.display='flex'}
+function openAdmin(){document.getElementById('adminDash').style.display='flex';renderPending()}
+function vendorLogin(){if(vEmail.value==='vendor@dorumart.com'&&vPass.value==='12345'){vendorLogin.style.display='none';vendorDash.style.display='flex';renderVendorApproved()}}
+
+function addShop(){const name=shopName.value;const file=shopImage.files[0];if(!name||!file)return alert('Please enter shop name and upload image');const reader=new FileReader();reader.onload=function(e){const image=e.target.result;const shops=getShops();shops.push({name,image,status:'pending'});setShops(shops);shopName.value='';shopImage.value='';alert('Shop sent for admin approval ✅')};reader.readAsDataURL(file)}
+
+function renderPending(){const box=document.getElementById('pendingShops');const shops=getShops().filter(s=>s.status==='pending');box.innerHTML=shops.map((s,i)=>`<div class='card'><img src='${s.image}' style='width:100%;height:120px;object-fit:cover;border-radius:12px'><h4>${s.name}</h4><button onclick='approveShop(${i})'>Approve</button></div>`).join('')||'No pending'}
+function approveShop(i){const shops=getShops();let idx=-1,c=0;for(let x=0;x<shops.length;x++){if(shops[x].status==='pending'){if(c===i){idx=x;break}c++}}
+if(idx>-1){shops[idx].status='approved';setShops(shops);renderPending();renderHomeShops();}}
+
+function renderHomeShops(){const box=document.getElementById('shops');const shops=getShops().filter(s=>s.status==='approved');box.innerHTML=shops.map(s=>`<div class='card' onclick="openShop('${s.name.replace(/'/g,"\'")}')"><img src='${s.image}' style='width:100%;height:140px;object-fit:cover;border-radius:12px'><h3>${s.name}</h3></div>`).join('')||'No approved shops'}
+
+function renderVendorApproved(){const box=document.getElementById('vendorApprovedShops');const shops=getShops().filter(s=>s.status==='approved');box.innerHTML=shops.map(s=>`<div class='card'><h4>${s.name}</h4><button onclick="openManage('${s.name.replace(/'/g,"\'")}')">Manage Products</button></div>`).join('')||'No approved shops yet'}
+
+function openManage(name){currentShop=name;manageProducts.style.display='flex';manageTitle.innerText=name+' Products';renderManageList()}
+function addProductToShop(){if(!currentShop)return;const store=getProducts();store[currentShop]=store[currentShop]||[];store[currentShop].push({name:prodName.value,price:prodPrice.value});setProducts(store);prodName.value='';prodPrice.value='';renderManageList()}
+function renderManageList(){const items=getProducts()[currentShop]||[];manageList.innerHTML=items.map(p=>`<div>${p.name} - ₹${p.price}</div>`).join('')||'No products'}
+
+function openShop(name){currentShop=name;shopModal.style.display='flex';shopTitle.innerText=name;const items=getProducts()[name]||[];shopProducts.innerHTML=items.map(p=>`<div class='card'>${p.name} - ₹${p.price}</div>`).join('')||'No products yet'}
+
+renderHomeShops();
+</script></body>
+</html>
