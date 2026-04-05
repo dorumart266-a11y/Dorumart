@@ -1,72 +1,131 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>DoruMart</title>
-<style>
-body{font-family:Arial,sans-serif;margin:0;background:#f3f4f6} .top{display:flex;gap:10px;padding:14px;background:#fff;position:sticky;top:0} button{cursor:pointer}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;padding:20px}.card{background:#fff;padding:14px;border-radius:16px}
-.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:20}.box{background:#fff;padding:20px;border-radius:16px;width:420px;max-height:80vh;overflow:auto}
-input{width:100%;padding:10px;margin:8px 0;border:1px solid #ccc;border-radius:8px}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DoruMart Admin & Store</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f4f7f6; color: #333; }
+        
+        /* Header */
+        header { background: #006837; color: white; display: flex; justify-content: space-between; padding: 10px 20px; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .admin-btn { background: #1a1a1a; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+
+        /* Admin Panel Section (Hidden initially) */
+        #adminPanel { display: none; background: #fff; padding: 20px; border-bottom: 2px solid #006837; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .admin-form { display: flex; flex-wrap: wrap; gap: 10px; max-width: 900px; margin: auto; align-items: flex-end; }
+        .admin-form div { display: flex; flex-direction: column; }
+        .admin-form input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .add-btn { background: #006837; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+        /* Store Layout */
+        .main { display: flex; }
+        .sidebar { width: 80px; background: white; border-right: 1px solid #ddd; padding-top: 20px; display: flex; flex-direction: column; align-items: center; height: 100vh; position: sticky; top: 60px; }
+        .cat-box { width: 60px; padding: 10px 0; margin-bottom: 15px; text-align: center; border-radius: 10px; border: 1px solid #eee; cursor: pointer; font-size: 11px; }
+        .cat-box.active { background: #e8f5e9; border-color: #006837; font-weight: bold; }
+
+        /* Product Grid */
+        #productGrid { flex: 1; padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: relative; }
+        .card img { width: 100%; height: 110px; object-fit: contain; }
+        .card h4 { margin: 10px 0 5px; font-size: 14px; height: 35px; overflow: hidden; }
+        .price-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+        .qty-btn { border: 1px solid #28a745; color: #28a745; border-radius: 4px; padding: 2px 8px; display: flex; gap: 10px; font-weight: bold; }
+
+        /* Floating Cart */
+        .cart-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1c8d3b; color: white; padding: 12px 40px; border-radius: 50px; font-weight: bold; }
+    </style>
 </head>
 <body>
-<div class="top">
-  <button onclick="openAdmin()">Admin</button>
-  <button onclick="openVendorLogin()">Vendor</button>
-</div><div style="padding:20px">
-  <h2>🏪 Verified Vendor Shops</h2>
-  <div id="shops" class="grid"></div>
-</div><div id="vendorLogin" class="modal"><div class="box">
-  <h3>Vendor Login</h3>
-  <input id="vEmail" placeholder="vendor@dorumart.com">
-  <input id="vPass" type="password" placeholder="12345">
-  <button onclick="vendorLogin()">Login</button>
-</div></div><div id="vendorDash" class="modal"><div class="box">
-  <h3>Vendor Dashboard</h3>
-  <input id="shopName" placeholder="Shop name">
-  <input id="shopImage" type="file" accept="image/*">
-  <button onclick="addShop()">Add Shop</button>
-  <div id="vendorApprovedShops"></div>
-</div></div><div id="adminDash" class="modal"><div class="box">
-  <h3>Admin Pending Shops</h3>
-  <div id="pendingShops"></div>
-</div></div><div id="shopModal" class="modal"><div class="box">
-  <h3 id="shopTitle"></h3>
-  <div id="shopProducts"></div>
-</div></div><div id="manageProducts" class="modal"><div class="box">
-  <h3 id="manageTitle"></h3>
-  <input id="prodName" placeholder="Product name">
-  <input id="prodPrice" type="number" placeholder="Price">
-  <button onclick="addProductToShop()">Add Product</button>
-  <div id="manageList"></div>
-</div></div><script>
-let currentShop='';
-function getShops(){return JSON.parse(localStorage.getItem('dorumart_vendor_shops')||'[]')}
-function setShops(v){localStorage.setItem('dorumart_vendor_shops',JSON.stringify(v))}
-function getProducts(){return JSON.parse(localStorage.getItem('dorumart_shop_products')||'{}')}
-function setProducts(v){localStorage.setItem('dorumart_shop_products',JSON.stringify(v))}
 
-function openVendorLogin(){document.getElementById('vendorLogin').style.display='flex'}
-function openAdmin(){document.getElementById('adminDash').style.display='flex';renderPending()}
-function vendorLogin(){if(vEmail.value==='vendor@dorumart.com'&&vPass.value==='12345'){vendorLogin.style.display='none';vendorDash.style.display='flex';renderVendorApproved()}}
+    <header>
+        <button class="admin-btn" onclick="toggleAdmin()">Toggle Admin Panel</button>
+        <div class="brand"><h2>DoruMart</h2></div>
+        <div></div>
+    </header>
 
-function addShop(){const name=shopName.value;const file=shopImage.files[0];if(!name||!file)return alert('Please enter shop name and upload image');const reader=new FileReader();reader.onload=function(e){const image=e.target.result;const shops=getShops();shops.push({name,image,status:'pending'});setShops(shops);shopName.value='';shopImage.value='';alert('Shop sent for admin approval ✅')};reader.readAsDataURL(file)}
+    <section id="adminPanel">
+        <h3 style="text-align: center; margin-top: 0;">Add New Product</h3>
+        <div class="admin-form">
+            <div>
+                <label>Product Name</label>
+                <input type="text" id="pName" placeholder="e.g. Fresh Paneer">
+            </div>
+            <div>
+                <label>Price (₹)</label>
+                <input type="number" id="pPrice" placeholder="e.g. 80">
+            </div>
+            <div>
+                <label>Image URL</label>
+                <input type="text" id="pImg" placeholder="Link to image">
+            </div>
+            <button class="add-btn" onclick="addProduct()">Add Product</button>
+        </div>
+    </section>
 
-function renderPending(){const box=document.getElementById('pendingShops');const shops=getShops().filter(s=>s.status==='pending');box.innerHTML=shops.map((s,i)=>`<div class='card'><img src='${s.image}' style='width:100%;height:120px;object-fit:cover;border-radius:12px'><h4>${s.name}</h4><button onclick='approveShop(${i})'>Approve</button></div>`).join('')||'No pending'}
-function approveShop(i){const shops=getShops();let idx=-1,c=0;for(let x=0;x<shops.length;x++){if(shops[x].status==='pending'){if(c===i){idx=x;break}c++}}
-if(idx>-1){shops[idx].status='approved';setShops(shops);renderPending();renderHomeShops();}}
+    <div class="main">
+        <div class="sidebar">
+            <div class="cat-box active">🥛<br>Milk</div>
+            <div class="cat-box">🍞<br>Bread</div>
+            <div class="cat-box">🥚<br>Eggs</div>
+        </div>
 
-function renderHomeShops(){const box=document.getElementById('shops');const shops=getShops().filter(s=>s.status==='approved');box.innerHTML=shops.map(s=>`<div class='card' onclick="openShop('${s.name.replace(/'/g,"\'")}')"><img src='${s.image}' style='width:100%;height:140px;object-fit:cover;border-radius:12px'><h3>${s.name}</h3></div>`).join('')||'No approved shops'}
+        <div id="productGrid">
+            <div class="card">
+                <img src="https://m.media-amazon.com/images/I/61NlS6n3S9L._SL1500_.jpg">
+                <h4>Amul Taaza Milk</h4>
+                <div class="price-row">
+                    <strong>₹27</strong>
+                    <div class="qty-btn">+</div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-function renderVendorApproved(){const box=document.getElementById('vendorApprovedShops');const shops=getShops().filter(s=>s.status==='approved');box.innerHTML=shops.map(s=>`<div class='card'><h4>${s.name}</h4><button onclick="openManage('${s.name.replace(/'/g,"\'")}')">Manage Products</button></div>`).join('')||'No approved shops yet'}
+    <div class="cart-bar">Cart: 0 items</div>
 
-function openManage(name){currentShop=name;manageProducts.style.display='flex';manageTitle.innerText=name+' Products';renderManageList()}
-function addProductToShop(){if(!currentShop)return;const store=getProducts();store[currentShop]=store[currentShop]||[];store[currentShop].push({name:prodName.value,price:prodPrice.value});setProducts(store);prodName.value='';prodPrice.value='';renderManageList()}
-function renderManageList(){const items=getProducts()[currentShop]||[];manageList.innerHTML=items.map(p=>`<div>${p.name} - ₹${p.price}</div>`).join('')||'No products'}
+    <script>
+        // 1. Admin Panel toggle karne ke liye
+        function toggleAdmin() {
+            const panel = document.getElementById('adminPanel');
+            panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
+        }
 
-function openShop(name){currentShop=name;shopModal.style.display='flex';shopTitle.innerText=name;const items=getProducts()[name]||[];shopProducts.innerHTML=items.map(p=>`<div class='card'>${p.name} - ₹${p.price}</div>`).join('')||'No products yet'}
+        // 2. Product add karne ka main logic
+        function addProduct() {
+            const name = document.getElementById('pName').value;
+            const price = document.getElementById('pPrice').value;
+            const img = document.getElementById('pImg').value || 'https://via.placeholder.com/100'; // Default image agar khali ho
 
-renderHomeShops();
-</script></body>
+            if(name === "" || price === "") {
+                alert("Bhai, Name aur Price toh daal do!");
+                return;
+            }
+
+            // Naya HTML element banana
+            const productGrid = document.getElementById('productGrid');
+            const newCard = document.createElement('div');
+            newCard.className = 'card';
+
+            newCard.innerHTML = `
+                <img src="${img}">
+                <h4>${name}</h4>
+                <div class="price-row">
+                    <strong>₹${price}</strong>
+                    <div class="qty-btn">+</div>
+                </div>
+            `;
+
+            // Grid mein sabse upar add karna
+            productGrid.prepend(newCard);
+
+            // Inputs clear karna
+            document.getElementById('pName').value = "";
+            document.getElementById('pPrice').value = "";
+            document.getElementById('pImg').value = "";
+            
+            alert("Product Added Successfully!");
+        }
+    </script>
+</body>
 </html>
